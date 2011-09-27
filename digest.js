@@ -32,7 +32,7 @@ function DigestClient(client, username, password, expectedRealm){
 	return self;
 }
 
-DigestClient.prototype.request = function(method, path, request_headers){
+DigestClient.prototype.request = function(method, path, request_headers, post_data){
 	var self = this;
 
 	/* If method omitted, assume it was GET. */
@@ -85,10 +85,16 @@ DigestClient.prototype.request = function(method, path, request_headers){
 
 		request_headers["authorization"] = hdrVal;
 	}
-
+	if(post_data){
+		request_headers["Content-Length"] = post_data.length,
+		request_headers["Content-Type"] = "application/json"
+	}
 	req = self.client.request(method, path, request_headers);
-
-	req.addListener("response", function(response){
+	if(post_data){
+		req.write(post_data, 'utf8');
+	}
+	req.end();
+	req.on("response", function(response){
 		/* If not authorized, then probably need to update nonce. */
 		if(401 == response.statusCode){
 			var a = response.headers["www-authenticate"];
@@ -160,3 +166,4 @@ exports.createClient = function(port, host, username, password, expectedRealm){
 	var c = http.createClient(port, host);
 	return new DigestClient(c, username, password);
 }
+
